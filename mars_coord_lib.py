@@ -5,91 +5,37 @@
 # @Last Modified time: 2018-12-29 16:49:16
 import math
 
+from astropy.time import Time
+import astropy.units as u
+
 #set to mars2000, from
 # Report of the IAU/IAG Working Group on cartographic coordinates and 
 # rotational elements: 2006 P. Kenneth Seidelmann
 
-a = 3396190.000
-b = 3376200.000
-# inverse flattening	169.8944472
+# a = 3396190.000
+# b = 3376200.000
+# # inverse flattening	169.8944472
 
-f = (a - b) / a
-e_sq = f * (2-f)
+# f = (a - b) / a
+# e_sq = f * (2-f)
 
 OMEGA_MARS = 7.088235959e-5  # Mars' rotation rate (rad/s)
 # 24.6229 hours = 3600 * 24.6229
-def geodetic_to_ecef(lat, lon, h):
+def geodetic_to_ecef(lat, lon, h, a = 3396190.000, b = 3376200.000 ):
     # (lat, lon) in degrees
     # h in meters
+    
+    f = (a - b) / a
+    e_sq = f * (2-f)
+
     lamb = math.radians(lat)
     phi = math.radians(lon)
     s = math.sin(lamb)
     N = a / math.sqrt(1 - e_sq * s * s)
 
-    sin_lambda = math.sin(lamb)
-    cos_lambda = math.cos(lamb)
-    sin_phi = math.sin(phi)
-    cos_phi = math.cos(phi)
-
-    x = (h + N) * cos_lambda * cos_phi
-    y = (h + N) * cos_lambda * sin_phi
-    z = (h + (1 - e_sq) * N) * sin_lambda
-
-    return x, y, z
-
-def ecef_to_enu(x, y, z, lat0, lon0, h0):
-    
-    lamb = math.radians(lat0)
-    phi = math.radians(lon0)
-    s = math.sin(lamb)
-    N = a / math.sqrt(1 - e_sq * s * s)
-
-    sin_lambda = math.sin(lamb)
-    cos_lambda = math.cos(lamb)
-    sin_phi = math.sin(phi)
-    cos_phi = math.cos(phi)
-
-    x0 = (h0 + N) * cos_lambda * cos_phi
-    y0 = (h0 + N) * cos_lambda * sin_phi
-    z0 = (h0 + (1 - e_sq) * N) * sin_lambda
-
-    xd = x - x0
-    yd = y - y0
-    zd = z - z0
-
-    t = -cos_phi * xd -  sin_phi * yd
-
-    xEast = -sin_phi * xd + cos_phi * yd
-    yNorth = t * sin_lambda  + cos_lambda * zd
-    zUp = cos_lambda * cos_phi * xd + cos_lambda * sin_phi * yd + sin_lambda * zd
-
-    return xEast, yNorth, zUp
-
-def enu_to_ecef(xEast, yNorth, zUp, lat0, lon0, h0):
-    
-    lamb = math.radians(lat0)
-    phi = math.radians(lon0)
-    s = math.sin(lamb)
-    N = a / math.sqrt(1 - e_sq * s * s)
-
-    sin_lambda = math.sin(lamb)
-    cos_lambda = math.cos(lamb)
-    sin_phi = math.sin(phi)
-    cos_phi = math.cos(phi)
-
-    x0 = (h0 + N) * cos_lambda * cos_phi
-    y0 = (h0 + N) * cos_lambda * sin_phi
-    z0 = (h0 + (1 - e_sq) * N) * sin_lambda
-
-    t = cos_lambda * zUp - sin_lambda * yNorth
-
-    zd = sin_lambda * zUp + cos_lambda * yNorth
-    xd = cos_phi * t - sin_phi * xEast 
-    yd = sin_phi * t + cos_phi * xEast
-
-    x = xd + x0 
-    y = yd + y0 
-    z = zd + z0 
+    x = (h + N) * math.cos(lamb) * math.cos(phi)
+    y = (h + N) * math.cos(lamb) * math.sin(phi)
+    z = (h + (1 - e_sq) * N) * math.sin(lamb)
 
     return x, y, z
 
@@ -143,6 +89,62 @@ def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
 
     return lat0, lon0, h0
 
+def ecef_to_enu(x, y, z, lat0, lon0, h0, a = 3396190.0, b = 3376200.000 ):
+    
+    lamb = math.radians(lat0)
+    phi = math.radians(lon0)
+    s = math.sin(lamb)
+    N = a / math.sqrt(1 - e_sq * s * s)
+
+    sin_lambda = math.sin(lamb)
+    cos_lambda = math.cos(lamb)
+    sin_phi = math.sin(phi)
+    cos_phi = math.cos(phi)
+
+    x0 = (h0 + N) * cos_lambda * cos_phi
+    y0 = (h0 + N) * cos_lambda * sin_phi
+    z0 = (h0 + (1 - e_sq) * N) * sin_lambda
+
+    xd = x - x0
+    yd = y - y0
+    zd = z - z0
+
+    t = -cos_phi * xd -  sin_phi * yd
+
+    xEast = -sin_phi * xd + cos_phi * yd
+    yNorth = t * sin_lambda  + cos_lambda * zd
+    zUp = cos_lambda * cos_phi * xd + cos_lambda * sin_phi * yd + sin_lambda * zd
+
+    return xEast, yNorth, zUp
+
+def enu_to_ecef(xEast, yNorth, zUp, lat0, lon0, h0, a = 3396190.0, b = 3376200.000 ):
+    
+    lamb = math.radians(lat0)
+    phi = math.radians(lon0)
+    s = math.sin(lamb)
+    N = a / math.sqrt(1 - e_sq * s * s)
+
+    sin_lambda = math.sin(lamb)
+    cos_lambda = math.cos(lamb)
+    sin_phi = math.sin(phi)
+    cos_phi = math.cos(phi)
+
+    x0 = (h0 + N) * cos_lambda * cos_phi
+    y0 = (h0 + N) * cos_lambda * sin_phi
+    z0 = (h0 + (1 - e_sq) * N) * sin_lambda
+
+    t = cos_lambda * zUp - sin_lambda * yNorth
+
+    zd = sin_lambda * zUp + cos_lambda * yNorth
+    xd = cos_phi * t - sin_phi * xEast 
+    yd = sin_phi * t + cos_phi * xEast
+
+    x = xd + x0 
+    y = yd + y0 
+    z = zd + z0 
+
+    return x, y, z
+
 def geodetic_to_enu(lat, lon, h, lat_ref, lon_ref, h_ref):
 
     x, y, z = geodetic_to_ecef( lat, lon, h)
@@ -155,36 +157,79 @@ def enu_to_geodetic(xEast, yNorth, zUp, lat_ref, lon_ref, h_ref):
 
     return ecef_to_geodetic( x,y,z)
 def mci_to_mcmf(Pos_ECI, T):
-    """T in jd"""
-    #https://space.stackexchange.com/questions/38807/transform-eci-to-ecef
     """
-    In the IAU language, ECEF and ECI do not exist per se. But to the spirit of your question, yes, ITRS is the equivalent of ECEF, and GCRS is the equivalent of ECI. Note that the IAU frames move differently than the simplified models, so check with your customer what frames they need.  
+    T is astropy time
+    Pos_ECI is np array
+
+    https://space.stackexchange.com/questions/38807/transform-eci-to-ecef
+    In the IAU language, ECEF and ECI do not exist per se. But to the spirit of your question, yes,
+    ITRS is the equivalent of ECEF, and GCRS is the equivalent of ECI. Note that the IAU frames move
+    differently than the simplified models, so check with your customer what frames they need.
     """
-    ...
     # Reference Date : 12:00 UT 1 Jan 2000 (JD 2451545.0)
-    
+    T0 = Time(2451545.0, format='jd', scale='utc')
+#    print('t, ',T, T0)
+    dt = T - T0
+    dt.format = 'sec'
+#    print('dtif astropy T, ',dt)
+#    print('dtif astropy Tv, ',dt.value)
+#    dt = float(T.value) - float(T0.value) #seconds
+#    print('dtif val, ',dt)
+
+    xx = Pos_ECI[0]
+    yy = Pos_ECI[1]
+    zz = Pos_ECI[2]
+
     #precession
     
     #nutation
     
     #rotation
-    mcmf_pos = (Pos_ECI.x.value, Pos_ECI.y.value, Pos_ECI.z.value )
-    
-    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
-                           [ np.sin(lon), np.cos(lat),   0],
-                           [     0      ,    0       ,   1]])
+    agl = dt.value * OMEGA_MARS #radians
+#    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
+#                          [ np.sin(lon), np.cos(lat),   0],
+#                           [     0      ,    0       ,   1]])
+    mcmf_pos = (xx * math.cos(agl) - yy * math.sin(agl),
+                xx * math.sin(agl) + yy * math.cos(agl),
+                zz )
     
     #polar motion
     
     return mcmf_pos
 
 def mcmf_to_mci( Pos_ECEF, T):
-    ...
-    mci_pos = (Pos_ECEF.x.value, Pos_ECEF.y.value, Pos_ECEF.z.value )
+    """
+    T is astropy time
+    PosECEF is np array
     
+    Reference Date : 12:00 UT 1 Jan 2000 (JD 2451545.0)
+    """
+    T0 = Time(2451545.0, format='jd', scale='utc')
+    dt = T - T0
+    dt.format = 'sec'
+
+    xx = Pos_ECEF[0]
+    yy = Pos_ECEF[1]
+    zz = Pos_ECEF[2]
+
+    #precession
+
+    #nutation
+
+    #rotation
+    agl = dt.value  * OMEGA_MARS #radians
+#    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
+#                          [ np.sin(lon), np.cos(lat),   0],
+#                           [     0      ,    0       ,   1]])
+    mci_pos = ( xx * math.cos(-agl) - yy * math.sin(-agl),
+                xx * math.sin(-agl) + yy * math.cos(-agl),
+                zz )
+
+    #polar motion
+
     return mci_pos
 
-def xyz2llh(x,y,z):
+def xyz2llh(x,y,z, a = 3396190.0, b = 3376200.000 ):
     '''
     alternative from web, currently not used.
     currently still earth not mars
