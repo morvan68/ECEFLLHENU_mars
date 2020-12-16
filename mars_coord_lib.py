@@ -6,42 +6,33 @@
 import math
 
 from astropy.time import Time
-import astropy.units as u
+#import astropy.units as u
 
 #set to mars2000, from
 # Report of the IAU/IAG Working Group on cartographic coordinates and 
 # rotational elements: 2006 P. Kenneth Seidelmann
 
-# a = 3396190.000
-# b = 3376200.000
-# # inverse flattening	169.8944472
-
-# f = (a - b) / a
-# e_sq = f * (2-f)
-
 OMEGA_MARS = 7.088235959e-5  # Mars' rotation rate (rad/s)
 # 24.6229 hours = 3600 * 24.6229
 def geodetic_to_ecef(lat, lon, h, a = 3396190.000, b = 3376200.000 ):
-    # (lat, lon) in degrees
+    # (lat, lon) in radians
     # h in meters
     
-    f = (a - b) / a
+    f = (a - b) / a #flattening
     e_sq = f * (2-f)
 
-    lamb = math.radians(lat)
-    phi = math.radians(lon)
-    s = math.sin(lamb)
+    s = math.sin(lat)
     N = a / math.sqrt(1 - e_sq * s * s)
 
-    x = (h + N) * math.cos(lamb) * math.cos(phi)
-    y = (h + N) * math.cos(lamb) * math.sin(phi)
-    z = (h + (1 - e_sq) * N) * math.sin(lamb)
+    x = (h + N) * math.cos(lat) * math.cos(lon)
+    y = (h + N) * math.cos(lat) * math.sin(lon)
+    z = (h + (1 - e_sq) * N) * math.sin(lat)
 
     return x, y, z
 
 def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
    # Convert from ECEF cartesian coordinates to 
-   # latitude, longitude and height.
+   # return latitude, longitude and height.
    # lat lon in degrees, height in m
    # Mars2000 is default
    
@@ -83,11 +74,7 @@ def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
     else :
         longit = temp - math.pi
 
-    lat0 = math.degrees(lat)
-    lon0 = math.degrees(longit)
-    h0 = height 
-
-    return lat0, lon0, h0
+    return lat, longit, height
 
 def ecef_to_enu(x, y, z, lat0, lon0, h0, a = 3396190.0, b = 3376200.000 ):
     
@@ -156,6 +143,40 @@ def enu_to_geodetic(xEast, yNorth, zUp, lat_ref, lon_ref, h_ref):
     x,y,z = enu_to_ecef( xEast, yNorth, zUp, lat_ref, lon_ref, h_ref)
 
     return ecef_to_geodetic( x,y,z)
+def mcmf_to_mci( Pos_ECEF, T):
+    """
+    T is astropy time
+    PosECEF is np array
+    
+    Reference Date : 12:00 UT 1 Jan 2000 (JD 2451545.0)
+    """
+    T0 = Time(2451545.0, format='jd', scale='utc')
+    dt = T - T0
+    dt.format = 'sec'
+
+    xx = Pos_ECEF[0]
+    yy = Pos_ECEF[1]
+    zz = Pos_ECEF[2]
+
+    #precession
+
+    #nutation
+
+    #rotation
+    agl = dt.value  * OMEGA_MARS #radians
+    agl = agl % (2 * math.pi)
+    print('mcmt to mci angle, ', agl)
+#    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
+#                          [ np.sin(lon), np.cos(lat),   0],
+#                           [     0      ,    0       ,   1]])
+    mci_pos = ( xx * math.cos(-agl) - yy * math.sin(-agl),
+                xx * math.sin(-agl) + yy * math.cos(-agl),
+                zz )
+
+    #polar motion
+
+    return mci_pos
+
 def mci_to_mcmf(Pos_ECI, T):
     """
     T is astropy time
@@ -186,6 +207,8 @@ def mci_to_mcmf(Pos_ECI, T):
     
     #rotation
     agl = dt.value * OMEGA_MARS #radians
+    agl = agl % (2 * math.pi)
+    print('mci to mcmf angle, ', agl)
 #    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
 #                          [ np.sin(lon), np.cos(lat),   0],
 #                           [     0      ,    0       ,   1]])
@@ -197,48 +220,12 @@ def mci_to_mcmf(Pos_ECI, T):
     
     return mcmf_pos
 
-def mcmf_to_mci( Pos_ECEF, T):
-    """
-    T is astropy time
-    PosECEF is np array
-    
-    Reference Date : 12:00 UT 1 Jan 2000 (JD 2451545.0)
-    """
-    T0 = Time(2451545.0, format='jd', scale='utc')
-    dt = T - T0
-    dt.format = 'sec'
-
-    xx = Pos_ECEF[0]
-    yy = Pos_ECEF[1]
-    zz = Pos_ECEF[2]
-
-    #precession
-
-    #nutation
-
-    #rotation
-    agl = dt.value  * OMEGA_MARS #radians
-#    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
-#                          [ np.sin(lon), np.cos(lat),   0],
-#                           [     0      ,    0       ,   1]])
-    mci_pos = ( xx * math.cos(-agl) - yy * math.sin(-agl),
-                xx * math.sin(-agl) + yy * math.cos(-agl),
-                zz )
-
-    #polar motion
-
-    return mci_pos
-
 def xyz2llh(x,y,z, a = 3396190.0, b = 3376200.000 ):
     '''
     alternative from web, currently not used.
-    currently still earth not mars
     https://gis.stackexchange.com/questions/265909/converting-from-ecef-to-geodetic-coordinates
-    Function to convert xyz ECEF to llh
+    Function to convert xyz ECEF to lat lon h
     convert cartesian coordinate into geographic coordinate
-    ellipsoid definition: WGS84
-      a= 6,378,137m
-      f= 1/298.257
 
     Input
       x: coordinate X meters
@@ -249,11 +236,10 @@ def xyz2llh(x,y,z, a = 3396190.0, b = 3376200.000 ):
       lon: longitude rad
       h: height meters
     '''
-    # --- WGS84 constants
     a = 6378137.0
-    f = 1.0 / 298.257223563
+    f = (a - b) / a
+    
     # --- derived constants
-    b = a - f*a
     e = math.sqrt(math.pow(a,2.0)-math.pow(b,2.0))/a
     clambda = math.atan2(y,x)
     p = math.sqrt(pow(x,2.0)+pow(y,2))
@@ -271,5 +257,5 @@ def xyz2llh(x,y,z, a = 3396190.0, b = 3376200.000 ):
         sn = math.sin(theta)
         N = math.pow(a,2.0)/math.sqrt(math.pow(a*cs,2.0)+math.pow(b*sn,2.0))
         h = p/cs - N
-    llh = {'lon':clambda, 'lat':theta, 'height': h}
+    llh = [theta, clambda, h]
     return llh
