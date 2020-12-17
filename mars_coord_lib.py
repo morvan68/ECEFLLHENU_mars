@@ -6,17 +6,19 @@
 import math
 
 from astropy.time import Time
-#import astropy.units as u
 
-#set to mars2000, from
+#mars2000, from
 # Report of the IAU/IAG Working Group on cartographic coordinates and 
 # rotational elements: 2006 P. Kenneth Seidelmann
 
 planet = 'Mars'
+print('planet lib, ', planet)
 
 if planet == 'Mars':
-    OMEGA_MARS = 7.088235959e-5  # Mars' rotation rate (rad/s)
+    OMEGA_PLANET = 7.088235959e-5  # rotation rate (rad/s)
     # 24.6229 hours
+elif planet == 'Earth':
+    OMEGA_PLANET = 7.2921158553e-5
 else:
     print('planet not found')
     exit(0)
@@ -152,7 +154,7 @@ def enu_to_geodetic(xEast, yNorth, zUp, lat_ref, lon_ref, h_ref):
     x,y,z = enu_to_ecef( xEast, yNorth, zUp, lat_ref, lon_ref, h_ref)
 
     return ecef_to_geodetic( x,y,z)
-def mcmf_to_mci( Pos_ECEF, T):
+def pcpf_to_pci( Pos_ECEF, T):
     """
     T is astropy time
     PosECEF is np array
@@ -172,9 +174,9 @@ def mcmf_to_mci( Pos_ECEF, T):
     #nutation
 
     #rotation
-    agl = dt.value  * OMEGA_MARS #radians
+    agl = dt.value  * OMEGA_PLANET #radians
     agl = agl % (2 * math.pi)
-    print('mcmt to mci angle, ', agl)
+#    print('pcpf to pci angle, ', agl)
 #    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
 #                          [ np.sin(lon), np.cos(lat),   0],
 #                           [     0      ,    0       ,   1]])
@@ -186,7 +188,7 @@ def mcmf_to_mci( Pos_ECEF, T):
 
     return mci_pos
 
-def mci_to_mcmf(Pos_ECI, T):
+def pci_to_pcpf(Pos_ECI, T):
     """
     T is astropy time
     Pos_ECI is np array
@@ -203,8 +205,6 @@ def mci_to_mcmf(Pos_ECI, T):
     dt.format = 'sec'
 #    print('dtif astropy T, ',dt)
 #    print('dtif astropy Tv, ',dt.value)
-#    dt = float(T.value) - float(T0.value) #seconds
-#    print('dtif val, ',dt)
 
     xx = Pos_ECI[0]
     yy = Pos_ECI[1]
@@ -215,9 +215,10 @@ def mci_to_mcmf(Pos_ECI, T):
     #nutation
     
     #rotation
-    agl = dt.value * OMEGA_MARS #radians
+    agl = dt.value * OMEGA_PLANET #radians
     agl = agl % (2 * math.pi)
-    print('mci to mcmf angle, ', agl)
+#    print('pci to pcpf angle rad, deg, ', agl, math.degrees(agl) )
+
 #    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
 #                          [ np.sin(lon), np.cos(lat),   0],
 #                           [     0      ,    0       ,   1]])
