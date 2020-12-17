@@ -12,8 +12,14 @@ from astropy.time import Time
 # Report of the IAU/IAG Working Group on cartographic coordinates and 
 # rotational elements: 2006 P. Kenneth Seidelmann
 
-OMEGA_MARS = 7.088235959e-5  # Mars' rotation rate (rad/s)
-# 24.6229 hours = 3600 * 24.6229
+planet = 'Mars'
+
+if planet == 'Mars':
+    OMEGA_MARS = 7.088235959e-5  # Mars' rotation rate (rad/s)
+    # 24.6229 hours
+else:
+    print('planet not found')
+    exit(0)
 def geodetic_to_ecef(lat, lon, h, a = 3396190.000, b = 3376200.000 ):
     # (lat, lon) in radians
     # h in meters
@@ -33,16 +39,14 @@ def geodetic_to_ecef(lat, lon, h, a = 3396190.000, b = 3376200.000 ):
 def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
    # Convert from ECEF cartesian coordinates to 
    # return latitude, longitude and height.
-   # lat lon in degrees, height in m
-   # Mars2000 is default
+   # lat lon in radians, height in m
+   # Mars2000 is default a, b
+   #based on calc from XXX?
    
     x2 = x ** 2
     y2 = y ** 2
     z2 = z ** 2
 
-#    a = 6378137.0000    # earth radius in meters
-#    b = 6356752.3142    # earth semiminor in meters 
-    
     e = math.sqrt (1-(b/a)**2)
     b2 = b*b 
     e2 = e ** 2
@@ -67,6 +71,7 @@ def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
     lat = math.atan( (z + ep*ep*zo)/r )
 
     temp = math.atan(y/x)
+    
     if x >=0 :
         longit = temp
     elif (x < 0) & (y >= 0):
@@ -76,10 +81,11 @@ def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
 
     return lat, longit, height
 
-def ecef_to_enu(x, y, z, lat0, lon0, h0, a = 3396190.0, b = 3376200.000 ):
+def ecef_to_enu(x, y, z, lat0, lon0, h0, a = 3396190.0, b = 3376200.0 ):
+    """lat lon of reference in radians"""
+    lamb = lat0
+    phi = lon0
     
-    lamb = math.radians(lat0)
-    phi = math.radians(lon0)
     s = math.sin(lamb)
     N = a / math.sqrt(1 - e_sq * s * s)
 
@@ -105,9 +111,10 @@ def ecef_to_enu(x, y, z, lat0, lon0, h0, a = 3396190.0, b = 3376200.000 ):
     return xEast, yNorth, zUp
 
 def enu_to_ecef(xEast, yNorth, zUp, lat0, lon0, h0, a = 3396190.0, b = 3376200.000 ):
-    
-    lamb = math.radians(lat0)
-    phi = math.radians(lon0)
+    """lat lon of reference in radians"""
+
+    lamb = lat0
+    phi = lon0
     s = math.sin(lamb)
     N = a / math.sqrt(1 - e_sq * s * s)
 
@@ -133,12 +140,14 @@ def enu_to_ecef(xEast, yNorth, zUp, lat0, lon0, h0, a = 3396190.0, b = 3376200.0
     return x, y, z
 
 def geodetic_to_enu(lat, lon, h, lat_ref, lon_ref, h_ref):
+    """lat lon of reference in radians"""
 
     x, y, z = geodetic_to_ecef( lat, lon, h)
     
     return ecef_to_enu( x, y, z, lat_ref, lon_ref, h_ref)
 
 def enu_to_geodetic(xEast, yNorth, zUp, lat_ref, lon_ref, h_ref):
+    """lat lon of reference in radians"""
 
     x,y,z = enu_to_ecef( xEast, yNorth, zUp, lat_ref, lon_ref, h_ref)
 
@@ -220,7 +229,7 @@ def mci_to_mcmf(Pos_ECI, T):
     
     return mcmf_pos
 
-def xyz2llh(x,y,z, a = 3396190.0, b = 3376200.000 ):
+def xyz2llh( x,y,z, a = 3396190.0, b = 3376200.000 ):
     '''
     alternative from web, currently not used.
     https://gis.stackexchange.com/questions/265909/converting-from-ecef-to-geodetic-coordinates
@@ -240,12 +249,12 @@ def xyz2llh(x,y,z, a = 3396190.0, b = 3376200.000 ):
     f = (a - b) / a
     
     # --- derived constants
-    e = math.sqrt(math.pow(a,2.0)-math.pow(b,2.0))/a
+    e = math.sqrt(math.pow(a,2.0) - math.pow(b,2.0)) / a
     clambda = math.atan2(y,x)
-    p = math.sqrt(pow(x,2.0)+pow(y,2))
+    p = math.sqrt(pow(x,2.0) + pow(y,2))
     h_old = 0.0
     # first guess with h=0 meters
-    theta = math.atan2(z,p*(1.0-math.pow(e,2.0)))
+    theta = math.atan2(z,p*(1.0 - math.pow(e,2.0)))
     cs = math.cos(theta)
     sn = math.sin(theta)
     N = math.pow(a,2.0)/math.sqrt(math.pow(a*cs,2.0)+math.pow(b*sn,2.0))
