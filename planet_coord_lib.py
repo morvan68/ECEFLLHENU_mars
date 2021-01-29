@@ -1,3 +1,4 @@
+
 import math
 
 from astropy.time import Time
@@ -6,26 +7,62 @@ from astropy.time import Time
 # Report of the IAU/IAG Working Group on cartographic coordinates and 
 # rotational elements: 2006 P. Kenneth Seidelmann
 
-planet = 'Mars'
+planet = 'Mars' #could be Earth
 print('planet lib, ', planet)
 
-if planet == 'Mars':
-    OMEGA_PLANET = 7.088235959e-5  # rotation rate (rad/s)
-    # 24.6229 hours
-elif planet == 'Earth':
-    OMEGA_PLANET = 7.2921158553e-5
-else:
-    print('planet not found')
-    exit(0)
-def geodetic_to_ecef(lat, lon, h, a = 3396190.000, b = 3376200.000 ):
+def planet_params( planet):
+
+    # WGS84 equivalent but for mars - basically set to Mars J2000 values
+    if planet == 'Mars':
+        a = 3396190.0
+        b = 3376200.0
+        #f = 0.00589  # Flattening
+        omega = 7.088235959e-5  # rotation rate (rad/s) # 24.6229 hours
+        mu = 4.282837e13 # Mars's standard gravitational parameter (m3/s2)
+    elif planet == 'Earth':
+        a = 6378137.0  # Semi-major axis
+        f = 1 / 298.257223563  # Flattening
+        b = a * (1 - f)  # Semi-minor axis
+        omega = 7.2921158553e-5
+        mu = 3.986005000e14 #4418e14 # Earth's standard gravitational parameter (m3/s2)
+    else:
+        print('params no planet')
+        exit(0)
+    return a, b, omega, mu
+
+PLANET_a , PLANET_b, OMEGA_PLANET, MU_PLANET = planet_params( planet )
+
+def gravity_params( planet ):
+
+    #https://astronomy.stackexchange.com/questions/34856/how-does-the-surface-gravity-on-mars-vary-between-the-equator-and-its-poles
+    if planet == 'Mars':
+        G_e = 3.70703 #m/s2 gravity at the equator
+        G_p = 3.72493 #m/s2 gravity at the poles
+    elif planet == 'Earth':
+        G_e = 9.7803253359 #m/s2 gravity at the equator
+        G_p = 9.8321849378 #m/s2 gravity at the poles
+    else:
+        print('no planet gravity')
+        exit(0)
+    return G_e, G_p
+
+def PlanetRadius(lat):
+    """radius of the planet as fn of latitude, lat in radians"""
+    
+    nominator = (PLANET_a**2 * math.cos(lat))**2 + (PLANET_b**2 * math.sin(lat))**2
+    denominator = (PLANET_a * math.cos(lat))**2 + (PLANET_b * math.sin(lat))**2
+    
+    return math.sqrt( nominator / denominator )
+
+def geodetic_to_ecef(lat, lon, h):
     # (lat, lon) in radians
     # h in meters
     
-    f = (a - b) / a #flattening
+    f = (PLANET_a - PLANET_b) / PLANET_a #flattening
     e_sq = f * (2-f)
 
     s = math.sin(lat)
-    N = a / math.sqrt(1 - e_sq * s * s)
+    N = PLANET_a / math.sqrt(1 - e_sq * s * s)
 
     x = (h + N) * math.cos(lat) * math.cos(lon)
     y = (h + N) * math.cos(lat) * math.sin(lon)
@@ -33,7 +70,7 @@ def geodetic_to_ecef(lat, lon, h, a = 3396190.000, b = 3376200.000 ):
 
     return x, y, z
 
-def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
+def ecef_to_geodetic( x, y, z ):
    # Convert from ECEF cartesian coordinates to 
    # return latitude, longitude and height.
    # lat lon in radians, height in m
@@ -43,12 +80,12 @@ def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
     y2 = y ** 2
     z2 = z ** 2
 
-    E2 = a ** 2 - b ** 2
+    E2 = PLANET_a ** 2 - PLANET_b ** 2
 
-    e = math.sqrt (1-(b/a)**2)
-    b2 = b*b 
+    e = math.sqrt (1-(PLANET_b/PLANET_a)**2)
+    b2 = PLANET_b*PLANET_b 
     e2 = e ** 2
-    ep = e*(a/b)
+    ep = e*(PLANET_a/PLANET_b)
     r = math.sqrt(x2+y2)
     r2 = r*r 
     F = 54*b2*z2
@@ -57,13 +94,14 @@ def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
     s = ( 1 + c + math.sqrt(c*c + 2*c) )**(1/3) 
     P = F / (3 * (s+1/s+1)**2 * G*G)
     Q = math.sqrt(1+2*e2*e2*P) 
-    ro = -(P*e2*r)/(1+Q) + math.sqrt((a*a/2)*(1+1/Q) - (P*(1-e2)*z2)/(Q*(1+Q)) - P*r2/2) 
+    ro = -(P*e2*r)/(1+Q) + math.sqrt((PLANET_a*PLANET_a/2)*(1+1/Q) 
+                                        - (P*(1-e2)*z2)/(Q*(1+Q)) - P*r2/2) 
     tmp = (r - e2*ro) ** 2 
     U = math.sqrt( tmp + z2 ) 
     V = math.sqrt( tmp + (1-e2)*z2 )
-    zo = (b2*z)/(a*V) 
+    zo = (b2*z)/(PLANET_a*V) 
 
-    height = U*( 1 - b2/(a*V) )
+    height = U*( 1 - b2/(PLANET_a*V) )
     
     lat = math.atan( (z + ep*ep*zo)/r )
 
@@ -78,13 +116,13 @@ def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
 
     return lat, longit, height
 
-def ecef_to_enu(x, y, z, lat0, lon0, h0, a = 3396190.0, b = 3376200.0 ):
+def ecef_to_enu(x, y, z, lat0, lon0, h0 ):
     """lat lon of reference in radians"""
     lamb = lat0
     phi = lon0
     
     s = math.sin(lamb)
-    N = a / math.sqrt(1 - e_sq * s * s)
+    N = PLANET_a / math.sqrt(1 - e_sq * s * s)
 
     sin_lambda = math.sin(lamb)
     cos_lambda = math.cos(lamb)
@@ -107,13 +145,13 @@ def ecef_to_enu(x, y, z, lat0, lon0, h0, a = 3396190.0, b = 3376200.0 ):
 
     return xEast, yNorth, zUp
 
-def enu_to_ecef(xEast, yNorth, zUp, lat0, lon0, h0, a = 3396190.0, b = 3376200.000 ):
+def enu_to_ecef(xEast, yNorth, zUp, lat0, lon0, h0 ):
     """lat lon of reference in radians"""
-
     lamb = lat0
     phi = lon0
+
     s = math.sin(lamb)
-    N = a / math.sqrt(1 - e_sq * s * s)
+    N = PLANET_a / math.sqrt(1 - e_sq * s * s)
 
     sin_lambda = math.sin(lamb)
     cos_lambda = math.cos(lamb)
@@ -225,7 +263,7 @@ def pci_to_pcpf(Pos_ECI, T):
     
     return mcmf_pos
 
-def xyz2llh( x,y,z, a = 3396190.0, b = 3376200.000 ):
+def xyz2llh( x,y,z ):
     '''
     alternative from web, currently not used.
     https://gis.stackexchange.com/questions/265909/converting-from-ecef-to-geodetic-coordinates
@@ -240,10 +278,10 @@ def xyz2llh( x,y,z, a = 3396190.0, b = 3376200.000 ):
       lon: longitude rad
       h: height meters
     '''
-    f = (a - b) / a
+    f = (PLANET_a - PLANET_b) / PLANET_a
     
     # --- derived constants
-    e = math.sqrt(math.pow(a,2.0) - math.pow(b,2.0)) / a
+    e = math.sqrt(math.pow(PLANET_a,2.0) - math.pow(PLANET_b,2.0)) / PLANET_a
     clambda = math.atan2(y,x)
     p = math.sqrt(pow(x,2.0) + pow(y,2))
     h_old = 0.0
@@ -251,17 +289,18 @@ def xyz2llh( x,y,z, a = 3396190.0, b = 3376200.000 ):
     theta = math.atan2(z,p*(1.0 - math.pow(e,2.0)))
     cs = math.cos(theta)
     sn = math.sin(theta)
-    N = math.pow(a,2.0)/math.sqrt(math.pow(a*cs,2.0)+math.pow(b*sn,2.0))
+    N = math.pow(PLANET_a,2.0)/math.sqrt(math.pow(PLANET_a*cs,2.0)+math.pow(PLANET_b*sn,2.0))
     h = p/cs - N
     while abs(h-h_old) > 1.0e-6:
         h_old = h
         theta = math.atan2(z,p*(1.0-math.pow(e,2.0)*N/(N+h)))
         cs = math.cos(theta)
         sn = math.sin(theta)
-        N = math.pow(a,2.0)/math.sqrt(math.pow(a*cs,2.0)+math.pow(b*sn,2.0))
+        N = math.pow(PLANET_a,2.0)/math.sqrt(math.pow(PLANET_a*cs,2.0)+math.pow(PLANET_b*sn,2.0))
         h = p/cs - N
     llh = [theta, clambda, h]
     return llh
+
 if __name__ == '__main__':
     
     x = 1000
@@ -270,9 +309,7 @@ if __name__ == '__main__':
     
     scale = 3
     x, y, z = scale*2566618.9, scale*1452025.2, scale*1679729.6
-    a = 3396190.0
-    b = 3376200.0
-
+    
 #    #wgs84
 #    a = 6378137.0  # Semi-major axis
 #    f = 1 / 298.257223563  # Flattening
@@ -280,8 +317,9 @@ if __name__ == '__main__':
     
     print( 'a,b, ', a, b)
     
-    aa = ecef_to_geodetic( x, y, z, a=a, b=b)
+    aa = ecef_to_geodetic( x, y, z )
     print( 'ecef, ', math.degrees(aa[0]), math.degrees(aa[1]), aa[2] )
     
-    bb = xyz2llh( x,y,z, a=a, b=b)
+    bb = xyz2llh( x,y,z )
     print( 'xyz, ', math.degrees(bb[0]), math.degrees(bb[1]), bb[2] )
+
