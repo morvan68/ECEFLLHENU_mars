@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: wuzida
-# @Date:   2018-12-28 15:20:54
-# @Last Modified by:   wuzida
-# @Last Modified time: 2018-12-29 16:49:16
 import math
 
 from astropy.time import Time
@@ -43,11 +38,12 @@ def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
    # return latitude, longitude and height.
    # lat lon in radians, height in m
    # Mars2000 is default a, b
-   #based on calc from XXX?
    
     x2 = x ** 2
     y2 = y ** 2
     z2 = z ** 2
+
+    E2 = a ** 2 - b ** 2
 
     e = math.sqrt (1-(b/a)**2)
     b2 = b*b 
@@ -55,7 +51,6 @@ def ecef_to_geodetic( x, y, z, a = 3396190.0, b = 3376200.000 ):
     ep = e*(a/b)
     r = math.sqrt(x2+y2)
     r2 = r*r 
-    E2 = a ** 2 - b ** 2
     F = 54*b2*z2
     G = r2 + (1-e2)*z2 - e2*E2
     c = (e2*e2*F*r2)/(G*G*G)
@@ -236,7 +231,6 @@ def xyz2llh( x,y,z, a = 3396190.0, b = 3376200.000 ):
     https://gis.stackexchange.com/questions/265909/converting-from-ecef-to-geodetic-coordinates
     Function to convert xyz ECEF to lat lon h
     convert cartesian coordinate into geographic coordinate
-
     Input
       x: coordinate X meters
       y: coordinate y meters
@@ -246,7 +240,6 @@ def xyz2llh( x,y,z, a = 3396190.0, b = 3376200.000 ):
       lon: longitude rad
       h: height meters
     '''
-    a = 6378137.0
     f = (a - b) / a
     
     # --- derived constants
@@ -269,3 +262,26 @@ def xyz2llh( x,y,z, a = 3396190.0, b = 3376200.000 ):
         h = p/cs - N
     llh = [theta, clambda, h]
     return llh
+if __name__ == '__main__':
+    
+    x = 1000
+    y = 1000
+    z = 1000
+    
+    scale = 3
+    x, y, z = scale*2566618.9, scale*1452025.2, scale*1679729.6
+    a = 3396190.0
+    b = 3376200.0
+
+#    #wgs84
+#    a = 6378137.0  # Semi-major axis
+#    f = 1 / 298.257223563  # Flattening
+#    b = a * (1 - f)  # Semi-minor axis
+    
+    print( 'a,b, ', a, b)
+    
+    aa = ecef_to_geodetic( x, y, z, a=a, b=b)
+    print( 'ecef, ', math.degrees(aa[0]), math.degrees(aa[1]), aa[2] )
+    
+    bb = xyz2llh( x,y,z, a=a, b=b)
+    print( 'xyz, ', math.degrees(bb[0]), math.degrees(bb[1]), bb[2] )
