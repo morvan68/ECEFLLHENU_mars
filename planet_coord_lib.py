@@ -7,7 +7,8 @@ from astropy.time import Time
 # Report of the IAU/IAG Working Group on cartographic coordinates and 
 # rotational elements: 2006 P. Kenneth Seidelmann
 
-planet = 'Mars' #could be Earth
+planet = 'Mars' #Mars or Earth
+planet = 'Earth' ##### 
 print('planet lib, ', planet)
 
 def planet_params( planet):
@@ -18,12 +19,17 @@ def planet_params( planet):
         b = 3376200.0
         #f = 0.00589  # Flattening
         omega = 7.088235959e-5  # rotation rate (rad/s) # 24.6229 hours
+        
+        ### should be 1/period???
+        
         mu = 4.282837e13 # Mars's standard gravitational parameter (m3/s2)
     elif planet == 'Earth':
         a = 6378137.0  # Semi-major axis
         f = 1 / 298.257223563  # Flattening
         b = a * (1 - f)  # Semi-minor axis
+        
         omega = 7.2921158553e-5
+        
         mu = 3.986005000e14 #4418e14 # Earth's standard gravitational parameter (m3/s2)
     else:
         print('params no planet')
@@ -195,9 +201,10 @@ def pcpf_to_pci( Pos_ECEF, T):
     Reference Date : 12:00 UT 1 Jan 2000 (JD 2451545.0)
     """
     T0 = Time(2451545.0, format='jd', scale='utc')
+    #T0 = Time('2020-01-01T00:00:00.000000', format='isot', scale='utc')
     dt = T - T0
     dt.format = 'sec'
-
+    print('pcpf dt value, ', dt.value)
     xx = Pos_ECEF[0]
     yy = Pos_ECEF[1]
     zz = Pos_ECEF[2]
@@ -209,7 +216,9 @@ def pcpf_to_pci( Pos_ECEF, T):
     #rotation
     agl = dt.value  * OMEGA_PLANET #radians
     agl = agl % (2 * math.pi)
-#    print('pcpf to pci angle, ', agl)
+    agl = agl * -1  #planet rotates anticlockwise.
+    
+    print('pcpf to pci angle rad deg, ', agl, math.degrees(agl), dt.value)
 #    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
 #                          [ np.sin(lon), np.cos(lat),   0],
 #                           [     0      ,    0       ,   1]])
@@ -227,12 +236,13 @@ def pci_to_pcpf(Pos_ECI, T):
     Pos_ECI is np array
 
     https://space.stackexchange.com/questions/38807/transform-eci-to-ecef
-    In the IAU language, ECEF and ECI do not exist per se. But to the spirit of your question, yes,
-    ITRS is the equivalent of ECEF, and GCRS is the equivalent of ECI. Note that the IAU frames move
-    differently than the simplified models, so check with your customer what frames they need.
+    ITRS is the equivalent of ECEF, and GCRS is the equivalent of ECI. Note that the
+    IAU frames move differently than the simplified models, so check with your 
+    customer what frames they need.
     """
     # Reference Date : 12:00 UT 1 Jan 2000 (JD 2451545.0)
     T0 = Time(2451545.0, format='jd', scale='utc')
+    #T0 = Time('2020-01-01T00:00:00.000000', format='isot', scale='utc')
 #    print('t, ',T, T0)
     dt = T - T0
     dt.format = 'sec'
@@ -250,10 +260,12 @@ def pci_to_pcpf(Pos_ECI, T):
     #rotation
     agl = dt.value * OMEGA_PLANET #radians
     agl = agl % (2 * math.pi)
-#    print('pci to pcpf angle rad, deg, ', agl, math.degrees(agl) )
+    agl = agl * -1 #planet rotates anticlockwise!
+
+    print('pci to pcpf angle rad, deg, ', agl, math.degrees(agl), dt.value )
 
 #    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
-#                          [ np.sin(lon), np.cos(lat),   0],
+#                           [ np.sin(lon), np.cos(lat),   0],
 #                           [     0      ,    0       ,   1]])
     mcmf_pos = (xx * math.cos(agl) - yy * math.sin(agl),
                 xx * math.sin(agl) + yy * math.cos(agl),
