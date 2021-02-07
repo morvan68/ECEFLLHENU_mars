@@ -8,7 +8,7 @@ from astropy.time import Time
 # rotational elements: 2006 P. Kenneth Seidelmann
 
 planet = 'Mars' #Mars or Earth
-planet = 'Earth' ##### 
+#planet = 'Earth' ##### 
 print('planet lib, ', planet)
 
 def planet_params( planet):
@@ -204,7 +204,7 @@ def pcpf_to_pci( Pos_ECEF, T):
     #T0 = Time('2020-01-01T00:00:00.000000', format='isot', scale='utc')
     dt = T - T0
     dt.format = 'sec'
-    print('pcpf dt value, ', dt.value)
+#    print('pcpf dt value, ', dt.value)
     xx = Pos_ECEF[0]
     yy = Pos_ECEF[1]
     zz = Pos_ECEF[2]
@@ -218,7 +218,7 @@ def pcpf_to_pci( Pos_ECEF, T):
     agl = agl % (2 * math.pi)
     agl = agl * -1  #planet rotates anticlockwise.
     
-    print('pcpf to pci angle rad deg, ', agl, math.degrees(agl), dt.value)
+#    print('pcpf to pci angle rad deg, ', agl, math.degrees(agl), dt.value)
 #    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
 #                          [ np.sin(lon), np.cos(lat),   0],
 #                           [     0      ,    0       ,   1]])
@@ -246,8 +246,7 @@ def pci_to_pcpf(Pos_ECI, T):
 #    print('t, ',T, T0)
     dt = T - T0
     dt.format = 'sec'
-#    print('dtif astropy T, ',dt)
-#    print('dtif astropy Tv, ',dt.value)
+#    print('pci dt value, ',dt.value)
 
     xx = Pos_ECI[0]
     yy = Pos_ECI[1]
@@ -262,7 +261,7 @@ def pci_to_pcpf(Pos_ECI, T):
     agl = agl % (2 * math.pi)
     agl = agl * -1 #planet rotates anticlockwise!
 
-    print('pci to pcpf angle rad, deg, ', agl, math.degrees(agl), dt.value )
+#    print('pci to pcpf angle rad, deg, ', agl, math.degrees(agl), dt.value )
 
 #    C_ENU2ECEF = np.array([[ np.cos(lon), -np.sin(lon) , 0],
 #                           [ np.sin(lon), np.cos(lat),   0],
